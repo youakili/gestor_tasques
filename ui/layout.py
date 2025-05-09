@@ -1,5 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
+from logic import afegir_tasca
+from utils import validar_data
+from tkinter import messagebox
 
 # Paleta de colors
 COLOR_FONS = "#F5F7FA"
@@ -42,24 +45,51 @@ def crear_layout_afegir(frame):
     ttk.Label(contenidor, text="Afegir una nova tasca", font=("Segoe UI", 14, "bold")).grid(column=0, row=0, columnspan=2, pady=(0, 20))
 
     ttk.Label(contenidor, text="Títol:").grid(column=0, row=1, sticky="w")
-    ttk.Entry(contenidor, width=50).grid(column=1, row=1, pady=5)
+    entrada_titol = ttk.Entry(contenidor, width=50)
+    entrada_titol.grid(column=1, row=1, pady=5)
 
     ttk.Label(contenidor, text="Descripció:").grid(column=0, row=2, sticky="nw", pady=(10, 0))
-    text = tk.Text(contenidor, width=50, height=5, bg="white", bd=0, highlightbackground="#ccc", relief="flat", font=("Segoe UI", 10))
-    text.grid(column=1, row=2, pady=5)
+    entrada_desc = tk.Text(contenidor, width=50, height=5, bg="white", bd=0, highlightbackground="#ccc", relief="flat", font=("Segoe UI", 10))
+    entrada_desc.grid(column=1, row=2, pady=5)
 
     ttk.Label(contenidor, text="Estat inicial:").grid(column=0, row=3, sticky="w", pady=(10, 0))
-    estat_menu = ttk.Combobox(contenidor, values=["Pendent", "Completada"], state="readonly", width=47)
-    estat_menu.set("Pendent")
-    estat_menu.grid(column=1, row=3, pady=5)
+    entrada_estat = ttk.Combobox(contenidor, values=["Pendent", "Completada"], state="readonly", width=47)
+    entrada_estat.set("Pendent")
+    entrada_estat.grid(column=1, row=3, pady=5)
 
     ttk.Label(contenidor, text="Categoria:").grid(column=0, row=4, sticky="w", pady=(10, 0))
-    ttk.Entry(contenidor, width=50).grid(column=1, row=4, pady=5)
+    entrada_categoria = ttk.Entry(contenidor, width=50)
+    entrada_categoria.grid(column=1, row=4, pady=5)
 
     ttk.Label(contenidor, text="Data límit (AAAA-MM-DD):").grid(column=0, row=5, sticky="w", pady=(10, 0))
-    ttk.Entry(contenidor, width=50).grid(column=1, row=5, pady=5)
+    entrada_data = ttk.Entry(contenidor, width=50)
+    entrada_data.grid(column=1, row=5, pady=5)
 
-    ttk.Button(contenidor, text="Afegir Tasca").grid(column=0, row=6, columnspan=2, pady=20)
+    def afegir_callback():
+        titol = entrada_titol.get().strip()
+        descripcio = entrada_desc.get("1.0", tk.END).strip()
+        estat = entrada_estat.get()
+        categoria = entrada_categoria.get().strip()
+        data_limit = entrada_data.get().strip()
+
+        if not titol:
+            messagebox.showwarning("Camp requerit", "El camp 'Títol' és obligatori.")
+            return
+
+        if data_limit and not validar_data(data_limit):
+            messagebox.showwarning("Data invàlida", "El format de la data ha de ser YYYY-MM-DD.")
+            return
+
+        afegir_tasca(titol, descripcio, estat, categoria, data_limit)
+        messagebox.showinfo("Èxit", "Tasca afegida correctament.")
+
+        entrada_titol.delete(0, tk.END)
+        entrada_desc.delete("1.0", tk.END)
+        entrada_estat.set("Pendent")
+        entrada_categoria.delete(0, tk.END)
+        entrada_data.delete(0, tk.END)
+
+    ttk.Button(contenidor, text="Afegir Tasca", command=afegir_callback).grid(column=0, row=6, columnspan=2, pady=20)
 
 #Crear la pestanya de llistar tasques
 def crear_layout_llistar(frame):
