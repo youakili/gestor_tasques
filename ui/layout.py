@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from logic import afegir_tasca
+from logic import afegir_tasca, llistar_tasques
 from utils import validar_data
 from tkinter import messagebox
 
@@ -93,31 +93,85 @@ def crear_layout_afegir(frame):
 
 #Crear la pestanya de llistar tasques
 def crear_layout_llistar(frame):
+    from datetime import datetime
     aplicar_estil(frame)
     frame.rowconfigure(1, weight=1)
     frame.columnconfigure(1, weight=1)
 
+    # TOP: Filtre per paraula clau
     top = ttk.Frame(frame, padding=10)
     top.grid(row=0, column=0, columnspan=2, sticky="ew")
 
     ttk.Label(top, text="Buscar/Filtrar:", font=("Segoe UI", 10)).pack(side="left", padx=5)
-    ttk.Entry(top, width=40).pack(side="left", padx=5)
+    entrada_filtre = ttk.Entry(top, width=40)
+    entrada_filtre.pack(side="left", padx=5)
 
+    # ESQUERRA: Llista de tasques
     esquerra = ttk.Frame(frame, padding=10)
     esquerra.grid(row=1, column=0, sticky="nsw")
 
     ttk.Label(esquerra, text="Tasques:", font=("Segoe UI", 12, "bold")).pack(anchor="w")
-    llista = tk.Listbox(esquerra, width=40, height=25, bd=0, highlightthickness=1, highlightbackground="#ccc", relief="flat", font=("Segoe UI", 10))
+
+    llista = tk.Listbox(esquerra, width=40, height=25, bd=0, highlightthickness=1,
+                        highlightbackground="#ccc", relief="flat", font=("Segoe UI", 10))
     llista.pack(pady=5)
 
+    # DRETA: Detalls de la tasca seleccionada
     dreta = ttk.Frame(frame, padding=10)
     dreta.grid(row=1, column=1, sticky="nsew")
 
     ttk.Label(dreta, text="Detalls de la tasca", font=("Segoe UI", 12, "bold")).grid(column=0, row=0, sticky="w", pady=(0, 10))
 
+    valors_detall = {}
     camps = ["Títol", "Descripció", "Estat", "Categoria", "Data límit", "Dies restants"]
     for i, camp in enumerate(camps, start=1):
-        ttk.Label(dreta, text=f"{camp}:", font=("Segoe UI", 10)).grid(column=0, row=i, sticky="w", pady=3)
+        ttk.Label(dreta, text=f"{camp}:", font=("Segoe UI", 10, "bold")).grid(column=0, row=i, sticky="w", pady=3)
+        valor = ttk.Label(dreta, text="", font=("Segoe UI", 10))
+        valor.grid(column=1, row=i, sticky="w")
+        valors_detall[camp] = valor
+
+    tasques_cache = []  # S'actualitzarà cada vegada que es carreguin
+
+    def calcular_dies_restants(data_limit):
+        try:
+            avui = datetime.today()
+            limit = datetime.strptime(data_limit, "%Y-%m-%d")
+            return (limit - avui).days
+        except:
+            return "-"
+
+    def carregar_tasques():
+        nonlocal tasques_cache
+        filtre = entrada_filtre.get().strip().lower()
+        tasques = llistar_tasques()
+        llista.delete(0, tk.END)
+        tasques_cache = []
+
+        for tasca in tasques:
+            id_, titol, descripcio, estat, categoria, data_limit, _ = tasca
+            if filtre in titol.lower() or filtre in (descripcio or "").lower():
+                tasques_cache.append(tasca)
+                llista.insert(tk.END, f"{titol}")
+
+    def mostrar_detalls(event):
+        index = llista.curselection()
+        if not index:
+            return
+        tasca = tasques_cache[index[0]]
+        id_, titol, descripcio, estat, categoria, data_limit, _ = tasca
+
+        valors_detall["Títol"].config(text=titol)
+        valors_detall["Descripció"].config(text=descripcio or "-")
+        valors_detall["Estat"].config(text=estat)
+        valors_detall["Categoria"].config(text=categoria or "-")
+        valors_detall["Data límit"].config(text=data_limit or "-")
+        valors_detall["Dies restants"].config(text=calcular_dies_restants(data_limit) if data_limit else "-")
+
+    entrada_filtre.bind("<KeyRelease>", lambda e: carregar_tasques())
+    llista.bind("<<ListboxSelect>>", mostrar_detalls)
+
+    carregar_tasques()
+    
 
 #Crear la pestanya de modificar o/i eliminar tasques
 def crear_layout_modificar(frame):
