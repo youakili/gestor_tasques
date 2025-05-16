@@ -1,8 +1,9 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from logic import afegir_tasca, llistar_tasques, modificar_tasca, eliminar_tasca, exportar_json
 from utils import validar_data, validar_text, validar_categoria, validar_estat, calcular_dies_restants
-from tkinter import messagebox
+from alert import aplicar_estil_alertes
+from datetime import datetime
 
 # Paleta de colors
 COLOR_FONS = "#F5F7FA"
@@ -11,25 +12,30 @@ COLOR_TEXT = "#333333"
 COLOR_ACCENT = "#3B82F6"  
 COLOR_BOTO = "#2563EB"    
 COLOR_BOTO_TEXT = "#FFFFFF"
+COLOR_URGENT = "#FF0000"
+COLOR_VENCIDA = "#000000"
+COLOR_FONS_VENCIDA = "#FFCCCC"
 
 # Estil global
 def aplicar_estil(widget):
     style = ttk.Style()
     style.theme_use("clam")
+    
+    # Configuració bàsica
     style.configure("TFrame", background=COLOR_FONS)
     style.configure("TLabel", background=COLOR_FONS, foreground=COLOR_TEXT, font=("Segoe UI", 10))
-    style.configure("TButton", background=COLOR_BOTO, foreground=COLOR_BOTO_TEXT, font=("Segoe UI", 10), padding=6)
+    style.configure("TButton", background=COLOR_BOTO, foreground=COLOR_BOTO_TEXT, 
+                   font=("Segoe UI", 10), padding=6)
     style.map("TButton", background=[("active", "#1D4ED8")])
     style.configure("TNotebook", background=COLOR_FONS, tabposition='n')
     style.configure("TNotebook.Tab", font=("Segoe UI", 10, "bold"), padding=[12, 6])
     style.map("TNotebook.Tab", background=[("selected", "#E0ECFF")], foreground=[("selected", "#000")])
     style.configure("TCombobox", padding=5)
-
-def estil_entry(canvas, parent, width=300, height=30):
-    rounded_box = canvas.create_rectangle(5, 5, width, height, outline="#ccc", width=1, fill="white")
-    entry = tk.Entry(parent, bd=0, font=("Segoe UI", 10), relief="flat", highlightthickness=0)
-    canvas.create_window(width // 2, height // 2, window=entry)
-    return entry
+    
+    # Estils per al Treeview
+    style.configure("Treeview", font=("Segoe UI", 10), rowheight=25)
+    style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
+    style.map("Treeview", background=[("selected", COLOR_ACCENT)])
 
 def crear_layout_afegir(frame):
     #Afegeix una nova tasca a la base de dades.
@@ -40,33 +46,27 @@ def crear_layout_afegir(frame):
 
     ttk.Label(contenidor, text="Afegir una nova tasca", font=("Segoe UI", 14, "bold")).grid(column=0, row=0, columnspan=2, pady=(0, 20))
 
-    # Camp Títol
-    ttk.Label(contenidor, text="Títol:*").grid(column=0, row=1, sticky="w")
-    entrada_titol = ttk.Entry(contenidor, width=50)
-    entrada_titol.grid(column=1, row=1, pady=5)
+    # Camps del formulari
+    camps = [
+        ("Títol:*", ttk.Entry(contenidor, width=50)),
+        ("Descripció:", tk.Text(contenidor, width=50, height=5, bg="white", bd=0, 
+                              highlightbackground="#ccc", relief="flat", font=("Segoe UI", 10))),
+        ("Estat:*", ttk.Combobox(contenidor, values=["Pendent", "Completada"], state="readonly", width=47)),
+        ("Categoria:", ttk.Entry(contenidor, width=50)),
+        ("Data límit (AAAA-MM-DD):", ttk.Entry(contenidor, width=50))
+    ]
 
-    # Camp Descripció
-    ttk.Label(contenidor, text="Descripció:").grid(column=0, row=2, sticky="nw", pady=(10, 0))
-    entrada_desc = tk.Text(contenidor, width=50, height=5, bg="white", bd=0, highlightbackground="#ccc", relief="flat", font=("Segoe UI", 10))
-    entrada_desc.grid(column=1, row=2, pady=5)
-
-    # Camp Estat
-    ttk.Label(contenidor, text="Estat:*").grid(column=0, row=3, sticky="w", pady=(10, 0))
-    entrada_estat = ttk.Combobox(contenidor, values=["Pendent", "Completada"], state="readonly", width=47)
+    entrada_estat = camps[2][1]
     entrada_estat.set("Pendent")
-    entrada_estat.grid(column=1, row=3, pady=5)
 
-    # Camp Categoria
-    ttk.Label(contenidor, text="Categoria:").grid(column=0, row=4, sticky="w", pady=(10, 0))
-    entrada_categoria = ttk.Entry(contenidor, width=50)
-    entrada_categoria.grid(column=1, row=4, pady=5)
+    for i, (label, widget) in enumerate(camps, start=1):
+        ttk.Label(contenidor, text=label).grid(column=0, row=i, sticky="w", pady=(10 if i>1 else 0))
+        widget.grid(column=1, row=i, pady=5)
 
-    # Camp Data límit
-    ttk.Label(contenidor, text="Data límit (AAAA-MM-DD):").grid(column=0, row=5, sticky="w", pady=(10, 0))
-    entrada_data = ttk.Entry(contenidor, width=50)
-    entrada_data.grid(column=1, row=5, pady=5)
+    entrada_titol, entrada_desc, entrada_estat, entrada_categoria, entrada_data = [camp[1] for camp in camps]
 
     def afegir_callback():
+        # Obtenir valors
         titol = entrada_titol.get().strip()
         descripcio = entrada_desc.get("1.0", tk.END).strip()
         estat = entrada_estat.get()
@@ -117,14 +117,20 @@ def crear_layout_llistar(frame):
     entrada_filtre = ttk.Entry(top, width=40)
     entrada_filtre.pack(side="left", padx=5)
 
-    # Llista tasques
+    # Llista tasques (Treeview)
     esquerra = ttk.Frame(frame, padding=10)
     esquerra.grid(row=1, column=0, sticky="nsw")
 
     ttk.Label(esquerra, text="Tasques:", font=("Segoe UI", 12, "bold")).pack(anchor="w")
-    llista = tk.Listbox(esquerra, width=40, height=25, bd=0, highlightthickness=1,
-                       highlightbackground="#ccc", relief="flat", font=("Segoe UI", 10))
-    llista.pack(pady=5)
+
+    tree = ttk.Treeview(esquerra, columns=('titol', 'estat', 'data_limit'), show='headings', height=25)
+    tree.column('titol', width=200, anchor='w')
+    tree.column('estat', width=100, anchor='center')
+    tree.column('data_limit', width=120, anchor='center')
+    tree.heading('titol', text='Títol')
+    tree.heading('estat', text='Estat')
+    tree.heading('data_limit', text='Data límit')
+    tree.pack(pady=5)
 
     # Detalls
     dreta = ttk.Frame(frame, padding=10)
@@ -146,21 +152,24 @@ def crear_layout_llistar(frame):
         nonlocal tasques_cache
         filtre = entrada_filtre.get().strip().lower()
         tasques = llistar_tasques()
-        llista.delete(0, tk.END)
+        tree.delete(*tree.get_children())
         tasques_cache = []
 
         for tasca in tasques:
             id_, titol, descripcio, estat, categoria, data_limit, _ = tasca
             if filtre in titol.lower() or (descripcio and filtre in descripcio.lower()):
                 tasques_cache.append(tasca)
-                llista.insert(tk.END, titol)
+                tree.insert('', 'end', values=(titol, estat, data_limit if data_limit else "-"))
+        
+        aplicar_estil_alertes(tree)
 
     def mostrar_detalls(event):
-        index = llista.curselection()
-        if not index:
+        item = tree.focus()
+        if not item:
             return
             
-        tasca = tasques_cache[index[0]]
+        index = tree.index(item)
+        tasca = tasques_cache[index]
         id_, titol, descripcio, estat, categoria, data_limit, _ = tasca
 
         valors_detall["Títol"].config(text=titol)
@@ -173,7 +182,7 @@ def crear_layout_llistar(frame):
         valors_detall["Dies restants"].config(text=dies if dies is not None else "-")
 
     entrada_filtre.bind("<KeyRelease>", lambda e: carregar_tasques())
-    llista.bind("<<ListboxSelect>>", mostrar_detalls)
+    tree.bind("<<TreeviewSelect>>", mostrar_detalls)
     carregar_tasques()
 
 def crear_layout_modificar(frame):
@@ -181,14 +190,18 @@ def crear_layout_modificar(frame):
     aplicar_estil(frame)
     frame.columnconfigure(1, weight=1)
 
-    # Llista tasques
+    # Llista tasques (Treeview)
     esquerra = ttk.Frame(frame, padding=10)
     esquerra.grid(row=0, column=0, sticky="nsw")
 
     ttk.Label(esquerra, text="Tasques:", font=("Segoe UI", 12, "bold")).pack(anchor="w")
-    llista = tk.Listbox(esquerra, width=40, height=25, bd=0, highlightthickness=1,
-                       highlightbackground="#ccc", relief="flat", font=("Segoe UI", 10))
-    llista.pack()
+
+    tree = ttk.Treeview(esquerra, columns=('titol', 'estat'), show='headings', height=25)
+    tree.column('titol', width=200, anchor='w')
+    tree.column('estat', width=100, anchor='center')
+    tree.heading('titol', text='Títol')
+    tree.heading('estat', text='Estat')
+    tree.pack()
 
     # Formulari modificació
     dreta = ttk.Frame(frame, padding=20)
@@ -199,7 +212,8 @@ def crear_layout_modificar(frame):
     # Camps formulari
     camps = [
         ("Títol:*", ttk.Entry(dreta, width=50)),
-        ("Descripció:", tk.Text(dreta, width=50, height=5, bg="white", bd=0, highlightbackground="#ccc", relief="flat", font=("Segoe UI", 10))),
+        ("Descripció:", tk.Text(dreta, width=50, height=5, bg="white", bd=0, 
+                              highlightbackground="#ccc", relief="flat", font=("Segoe UI", 10))),
         ("Estat:*", ttk.Combobox(dreta, values=["Pendent", "Completada"], state="readonly", width=47)),
         ("Categoria:", ttk.Entry(dreta, width=50)),
         ("Data límit (AAAA-MM-DD):", ttk.Entry(dreta, width=50))
@@ -227,17 +241,20 @@ def crear_layout_modificar(frame):
     def carregar_tasques():
         nonlocal tasques_cache
         tasques_cache = llistar_tasques()
-        llista.delete(0, tk.END)
+        tree.delete(*tree.get_children())
         for tasca in tasques_cache:
-            llista.insert(tk.END, tasca[1])
+            tree.insert('', 'end', values=(tasca[1], tasca[3]))
+        
+        aplicar_estil_alertes(tree)
 
     def omplir_dades(event):
         nonlocal id_seleccionada
-        index = llista.curselection()
-        if not index:
+        item = tree.focus()
+        if not item:
             return
             
-        tasca = tasques_cache[index[0]]
+        index = tree.index(item)
+        tasca = tasques_cache[index]
         id_seleccionada = tasca[0]
         
         entrada_titol.delete(0, tk.END)
@@ -295,7 +312,6 @@ def crear_layout_modificar(frame):
         carregar_tasques()
 
     def eliminar_tasca_seleccionada():
-        #Elimina una tasca a partir del seu ID.
         if id_seleccionada is None:
             messagebox.showwarning("Error", "Selecciona una tasca primer")
             return
@@ -312,13 +328,13 @@ def crear_layout_modificar(frame):
             entrada_categoria.delete(0, tk.END)
             entrada_data.delete(0, tk.END)
 
-    llista.bind("<<ListboxSelect>>", omplir_dades)
+    tree.bind("<<TreeviewSelect>>", omplir_dades)
     boto_guardar.config(command=guardar_canvis)
     boto_eliminar.config(command=eliminar_tasca_seleccionada)
     carregar_tasques()
 
 def crear_layout_exportar(frame):
-    #Exporta totes les tasques de la base de dades a un fitxer JSON.
+    #Exporta totes les tasques de la base de dades a un fitxer JSON.    
     aplicar_estil(frame)
     contenidor = ttk.Frame(frame, padding=30)
     contenidor.pack(expand=True)
