@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from logic import afegir_tasca, llistar_tasques, modificar_tasca, eliminar_tasca
+from logic import afegir_tasca, llistar_tasques, modificar_tasca, eliminar_tasca, exportar_json
 from utils import validar_data
 from tkinter import messagebox
 
@@ -301,4 +301,11 @@ def crear_layout_exportar(frame):
     ttk.Label(contenidor, text="Exportar Tasques", font=("Segoe UI", 14, "bold")).pack(pady=10)
     ttk.Label(contenidor, text="Les dades s'exportaran a un fitxer .json amb les tasques actuals.").pack(pady=10)
 
-    ttk.Button(contenidor, text="Exportar a JSON").pack(pady=20)
+    def exportar():
+        resultat = exportar_json()
+        if resultat:
+            messagebox.showinfo("Exportació correcta", "Les tasques s'han exportat correctament.")
+        else:
+            messagebox.showerror("Error", "No s'ha pogut fer l'exportació.")
+
+    ttk.Button(contenidor, text="Exportar a JSON", command=exportar).pack(pady=20)

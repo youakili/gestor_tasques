@@ -1,6 +1,8 @@
 import sqlite3
 import logging
 from datetime import datetime
+import json
+
 
 # Configuració del logging
 logging.basicConfig(filename="logging.log", level=logging.INFO,
@@ -107,3 +109,31 @@ def modificar_tasca(id_tasca, titol=None, descripcio=None, estat=None, categoria
         conn.close()
     except Exception as e:
         logging.error(f"Error en modificar_tasca: {e}")
+
+import json
+
+def exportar_json(nom_fitxer="tasques_exportades.json"):
+    #Exporta totes les tasques de la base de dades a un fitxer JSON.
+    try:
+        tasques = llistar_tasques()
+        dades = []
+        for t in tasques:
+            dades.append({
+                "id": t[0],
+                "titol": t[1],
+                "descripcio": t[2],
+                "estat": t[3],
+                "categoria": t[4],
+                "data_limit": t[5],
+                "data_creacio": t[6]
+            })
+
+        with open(nom_fitxer, "w", encoding="utf-8") as f:
+            json.dump(dades, f, ensure_ascii=False, indent=4)
+
+        logging.info(f"Exportació correcta a {nom_fitxer}")
+        return True
+
+    except Exception as e:
+        logging.error(f"Error en exportar_json: {e}")
+        return False
