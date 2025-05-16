@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from logic import afegir_tasca, llistar_tasques
+from logic import afegir_tasca, llistar_tasques, modificar_tasca, eliminar_tasca
 from utils import validar_data
 from tkinter import messagebox
 
@@ -175,6 +175,7 @@ def crear_layout_llistar(frame):
 
 #Crear la pestanya de modificar o/i eliminar tasques
 def crear_layout_modificar(frame):
+    from datetime import datetime
     aplicar_estil(frame)
     frame.columnconfigure(1, weight=1)
 
@@ -182,7 +183,9 @@ def crear_layout_modificar(frame):
     esquerra.grid(row=0, column=0, sticky="nsw")
 
     ttk.Label(esquerra, text="Tasques:", font=("Segoe UI", 12, "bold")).pack(anchor="w")
-    tk.Listbox(esquerra, width=40, height=25, bd=0, highlightthickness=1, highlightbackground="#ccc", relief="flat", font=("Segoe UI", 10)).pack()
+    llista = tk.Listbox(esquerra, width=40, height=25, bd=0, highlightthickness=1,
+                        highlightbackground="#ccc", relief="flat", font=("Segoe UI", 10))
+    llista.pack()
 
     dreta = ttk.Frame(frame, padding=20)
     dreta.grid(row=0, column=1, sticky="nsew")
@@ -190,25 +193,104 @@ def crear_layout_modificar(frame):
     ttk.Label(dreta, text="Modificar / Eliminar", font=("Segoe UI", 14, "bold")).grid(column=0, row=0, columnspan=2, pady=10)
 
     ttk.Label(dreta, text="Títol:").grid(column=0, row=1, sticky="w")
-    ttk.Entry(dreta, width=50).grid(column=1, row=1, pady=5)
+    entrada_titol = ttk.Entry(dreta, width=50)
+    entrada_titol.grid(column=1, row=1, pady=5)
 
     ttk.Label(dreta, text="Descripció:").grid(column=0, row=2, sticky="nw", pady=(10, 0))
-    tk.Text(dreta, width=50, height=5, bg="white", bd=0, highlightbackground="#ccc", relief="flat", font=("Segoe UI", 10)).grid(column=1, row=2, pady=5)
+    entrada_desc = tk.Text(dreta, width=50, height=5, bg="white", bd=0, highlightbackground="#ccc", relief="flat", font=("Segoe UI", 10))
+    entrada_desc.grid(column=1, row=2, pady=5)
 
     ttk.Label(dreta, text="Estat:").grid(column=0, row=3, sticky="w", pady=(10, 0))
-    ttk.Combobox(dreta, values=["Pendent", "Completada"], state="readonly", width=47).grid(column=1, row=3, pady=5)
+    entrada_estat = ttk.Combobox(dreta, values=["Pendent", "Completada"], state="readonly", width=47)
+    entrada_estat.grid(column=1, row=3, pady=5)
 
     ttk.Label(dreta, text="Categoria:").grid(column=0, row=4, sticky="w", pady=(10, 0))
-    ttk.Entry(dreta, width=50).grid(column=1, row=4, pady=5)
+    entrada_categoria = ttk.Entry(dreta, width=50)
+    entrada_categoria.grid(column=1, row=4, pady=5)
 
-    ttk.Label(dreta, text="Data límit:").grid(column=0, row=5, sticky="w", pady=(10, 0))
-    ttk.Entry(dreta, width=50).grid(column=1, row=5, pady=5)
+    ttk.Label(dreta, text="Data límit (AAAA-MM-DD):").grid(column=0, row=5, sticky="w", pady=(10, 0))
+    entrada_data = ttk.Entry(dreta, width=50)
+    entrada_data.grid(column=1, row=5, pady=5)
 
     boto_frame = ttk.Frame(dreta)
     boto_frame.grid(column=0, row=6, columnspan=2, pady=20)
 
-    ttk.Button(boto_frame, text="Guardar Canvis").pack(side="left", padx=10)
-    ttk.Button(boto_frame, text="Eliminar Tasca").pack(side="left", padx=10)
+    boto_guardar = ttk.Button(boto_frame, text="Guardar Canvis")
+    boto_guardar.pack(side="left", padx=10)
+
+    boto_eliminar = ttk.Button(boto_frame, text="Eliminar Tasca")
+    boto_eliminar.pack(side="left", padx=10)
+
+    tasques_cache = []
+    id_seleccionada = None
+
+    def carregar_tasques():
+        nonlocal tasques_cache
+        tasques_cache = llistar_tasques()
+        llista.delete(0, tk.END)
+        for tasca in tasques_cache:
+            llista.insert(tk.END, tasca[1])  # només mostrar el títol
+
+    def omplir_dades(event):
+        nonlocal id_seleccionada
+        index = llista.curselection()
+        if not index:
+            return
+        tasca = tasques_cache[index[0]]
+        id_seleccionada = tasca[0]
+        entrada_titol.delete(0, tk.END)
+        entrada_titol.insert(0, tasca[1])
+
+        entrada_desc.delete("1.0", tk.END)
+        entrada_desc.insert(tk.END, tasca[2])
+
+        entrada_estat.set(tasca[3])
+        entrada_categoria.delete(0, tk.END)
+        entrada_categoria.insert(0, tasca[4] or "")
+        entrada_data.delete(0, tk.END)
+        entrada_data.insert(0, tasca[5] or "")
+
+    def guardar_canvis():
+        if id_seleccionada is None:
+            messagebox.showwarning("Selecciona una tasca", "No has seleccionat cap tasca.")
+            return
+
+        titol = entrada_titol.get().strip()
+        desc = entrada_desc.get("1.0", tk.END).strip()
+        estat = entrada_estat.get()
+        categoria = entrada_categoria.get().strip()
+        data_limit = entrada_data.get().strip()
+
+        if not titol:
+            messagebox.showwarning("Camp requerit", "El camp 'Títol' és obligatori.")
+            return
+
+        modificar_tasca(id_seleccionada, titol, desc, estat, categoria, data_limit)
+        messagebox.showinfo("Modificació correcta", "La tasca ha estat modificada.")
+        carregar_tasques()
+
+    def eliminar_tasca_seleccionada():
+        if id_seleccionada is None:
+            messagebox.showwarning("Selecciona una tasca", "No has seleccionat cap tasca.")
+            return
+
+        confirmar = messagebox.askyesno("Confirmació", "Segur que vols eliminar aquesta tasca?")
+        if confirmar:
+            eliminar_tasca(id_seleccionada)
+            messagebox.showinfo("Tasca eliminada", "Tasca eliminada correctament.")
+            carregar_tasques()
+            entrada_titol.delete(0, tk.END)
+            entrada_desc.delete("1.0", tk.END)
+            entrada_estat.set("")
+            entrada_categoria.delete(0, tk.END)
+            entrada_data.delete(0, tk.END)
+
+    llista.bind("<<ListboxSelect>>", omplir_dades)
+    boto_guardar.config(command=guardar_canvis)
+    boto_eliminar.config(command=eliminar_tasca_seleccionada)
+
+    carregar_tasques()
+
 
 #Crear la pestanya de exportar tasques en format JSON
 def crear_layout_exportar(frame):
