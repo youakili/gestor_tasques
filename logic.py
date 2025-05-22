@@ -11,7 +11,7 @@ logging.basicConfig(filename="logging.log", level=logging.INFO,
 
 # Crear i connectar a la BBDD
 def crear_db():
-    """Connecta o crea la base de dades 'tasques.db' i la taula si no existeix."""
+    #Connecta o crea la base de dades 'tasques.db' i la taula si no existeix.
     try:
         conn = sqlite3.connect("tasques.db")
         cursor = conn.cursor()
@@ -137,3 +137,4 @@ def exportar_json(nom_fitxer="tasques_exportades.json"):
     except Exception as e:
         logging.error(f"Error en exportar_json: {e}")
         return False
+    
