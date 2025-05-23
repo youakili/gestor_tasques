@@ -4,7 +4,7 @@ from ui.layout import crear_layout_afegir, crear_layout_llistar, crear_layout_mo
 
 def crear_finestra(finestra):
     # Configuració bàsica de la finestra
-    finestra.title("Gestor de Tasques")
+    finestra.title("Reyos")
     finestra.geometry("900x600")
     finestra.resizable(False, False)
 
