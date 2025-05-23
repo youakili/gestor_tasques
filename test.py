@@ -6,6 +6,10 @@ from ui.window import crear_finestra
 from ui.pestanyes.afegir_pestanya import crear_layout_afegir
 from ui.pestanyes.llistar_pestanya import crear_layout_llistar
 from ui.pestanyes.modificar_pestanya import crear_layout_modificar
+import logging
+
+logging.basicConfig(filename="logging.log", level=logging.INFO,
+                    format="%(asctime)s - %(levelname)s - %(message)s")
 
 def run_tests():
     #Funció principal per executar els tests
@@ -39,6 +43,9 @@ def run_tests():
     test_llistar_tasques("dsa", False)
     
     print("\n✅ Tots els tests executats correctament!")
+    
+# Configuració del logging
+logging.info(f"Tots els tests executats correctament!")
 
 def test_afegir_tasca():
     #Test per afegir una nova tasca
